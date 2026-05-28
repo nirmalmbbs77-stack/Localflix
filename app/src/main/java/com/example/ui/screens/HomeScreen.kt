@@ -35,7 +35,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("LocalFlix", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
+                title = { Text("Nexus", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = onNavigateToSearch) {
                         Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = Color.White)
@@ -72,13 +72,25 @@ fun HomeScreen(
                 }
             }
             
-            if (favorites.isNotEmpty()) {
-                item {
+            item {
+                if (favorites.isNotEmpty()) {
                     VideoRow(
                         title = "My List",
                         videos = favorites,
                         onVideoClick = { onNavigateToDetails(it.id) }
                     )
+                } else {
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+                        Text(
+                            text = "My List",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                        Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                            Text("Your list is empty", color = Color.Gray)
+                        }
+                    }
                 }
             }
 

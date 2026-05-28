@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.ui.screens
 
 import android.net.Uri
@@ -11,6 +12,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -50,7 +53,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-@OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
     videoId: Long,
@@ -85,6 +88,9 @@ fun PlayerScreen(
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubPosition by remember { mutableLongStateOf(0L) }
     var sliderWidth by remember { mutableStateOf(0) }
+
+    var showEpisodesSheet by remember { mutableStateOf(false) }
+    var showSubtitlesSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentVideo) {
         currentVideo?.let { video ->
@@ -276,7 +282,7 @@ fun PlayerScreen(
                         visible = isScrubbing,
                         enter = fadeIn(tween(200)),
                         exit = fadeOut(tween(200)),
-                        modifier = Modifier.align(Alignment.TopStart).padding(bottom = 120.dp, start = 24.dp)
+                        modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 116.dp, start = 24.dp)
                     ) {
                         val density = LocalDensity.current
                         val thumbWidthDp = 160.dp
@@ -380,13 +386,13 @@ fun PlayerScreen(
                             BottomActionItem(
                                 icon = Icons.AutoMirrored.Filled.ViewList, 
                                 label = "Episodes",
-                                onClick = { coroutineScope.launch { snackbarHostState.showSnackbar("Episodes opened") } }
+                                onClick = { showEpisodesSheet = true }
                             )
                             Spacer(modifier = Modifier.width(48.dp))
                             BottomActionItem(
                                 icon = Icons.Filled.Subtitles, 
                                 label = "Audio & Subtitles",
-                                onClick = { coroutineScope.launch { snackbarHostState.showSnackbar("Audio & Subtitles opened") } }
+                                onClick = { showSubtitlesSheet = true }
                             )
                             Spacer(modifier = Modifier.width(48.dp))
                             BottomActionItem(
@@ -396,6 +402,93 @@ fun PlayerScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+
+    if (showEpisodesSheet) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable { showEpisodesSheet = false },
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.DarkGray, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .clickable(enabled = false) {}
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Episodes", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                        IconButton(onClick = { showEpisodesSheet = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        }
+                    }
+                    LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                        items(10) { index ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showEpisodesSheet = false }
+                                    .padding(16.dp)
+                            ) {
+                                Text("Episode ${index + 1}", color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+            }
+        }
+    }
+
+    if (showSubtitlesSheet) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable { showSubtitlesSheet = false },
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.DarkGray, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .clickable(enabled = false) {}
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Audio & Subtitles", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                        IconButton(onClick = { showSubtitlesSheet = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        }
+                    }
+                    val options = listOf("English (CC)", "Spanish", "French", "Off")
+                    LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                        items(options) { opt ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showSubtitlesSheet = false }
+                                    .padding(16.dp)
+                            ) {
+                                Text(opt, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }
