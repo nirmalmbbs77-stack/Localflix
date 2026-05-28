@@ -282,10 +282,10 @@ fun PlayerScreen(
                         visible = isScrubbing,
                         enter = fadeIn(tween(200)),
                         exit = fadeOut(tween(200)),
-                        modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 116.dp, start = 24.dp)
+                        modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 84.dp, start = 24.dp)
                     ) {
                         val density = LocalDensity.current
-                        val thumbWidthDp = 160.dp
+                        val thumbWidthDp = 150.dp
                         val thumbWidthPx = with(density) { thumbWidthDp.toPx() }
                         
                         val offsetPx = if (duration > 0 && sliderWidth > 0) {
@@ -296,36 +296,53 @@ fun PlayerScreen(
                         val maxOffsetPx = sliderWidth - thumbWidthPx
                         val clampedOffsetPx = offsetPx.coerceIn(0f, maxOffsetPx.coerceAtLeast(0f))
                         
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .offset { IntOffset(clampedOffsetPx.toInt(), 0) }
-                                .width(thumbWidthDp)
-                                .height(90.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.DarkGray)
+                                .width(thumbWidthDp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            currentVideo?.let { v ->
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(v.fileUri)
-                                        .setParameter(VideoFrameDecoder.VIDEO_FRAME_MICROS_KEY, scrubPosition * 1000)
-                                        .decoderFactory(VideoFrameDecoder.Factory())
-                                        .size(coil.size.Size.ORIGINAL)
-                                        .build(),
-                                    contentDescription = "Preview",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                            Text(
-                                text = formatDuration(scrubPosition),
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
+                            Box(
                                 modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .background(Color.Black.copy(alpha = 0.6f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(0xFF2B2B2B))
+                            ) {
+                                Column {
+                                    val roundedScrubMs = (scrubPosition / 1000) * 1000
+                                    currentVideo?.let { v ->
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context)
+                                                .data(v.fileUri)
+                                                .setParameter(VideoFrameDecoder.VIDEO_FRAME_MICROS_KEY, roundedScrubMs * 1000L)
+                                                .decoderFactory(VideoFrameDecoder.Factory())
+                                                .size(320)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = "Preview",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxWidth().height(84.dp)
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().height(28.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = formatDuration(scrubPosition),
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                }
+                            }
+                            // Vertical red line pointing to the slider thumb
+                            Box(
+                                modifier = Modifier
+                                    .width(2.dp)
+                                    .height(18.dp)
+                                    .background(Color.Red)
                             )
                         }
                     }
@@ -338,11 +355,11 @@ fun PlayerScreen(
                                     colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))
                                 )
                             )
-                            .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = 32.dp)
+                            .padding(top = 32.dp, bottom = 12.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(48.dp)
                         ) {
                             Slider(
                                 value = if (duration > 0) {
@@ -372,14 +389,14 @@ fun PlayerScreen(
                                 text = formatDuration(duration - (if (isScrubbing) scrubPosition else currentPosition)),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
+                                fontSize = 14.sp
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(40.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
