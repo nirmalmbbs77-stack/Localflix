@@ -130,7 +130,7 @@ fun PlayerScreen(
         }
     }
 
-    LaunchedEffect(exoPlayer, isPlaying, isScrubbing) {
+    LaunchedEffect(exoPlayer) {
         while (true) {
             if (!isScrubbing) {
                 currentPosition = exoPlayer?.currentPosition?.coerceAtLeast(0L) ?: 0L
@@ -172,7 +172,7 @@ fun PlayerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(showControls, duration) {
+            .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { offset ->
                         val width = size.width
@@ -311,14 +311,17 @@ fun PlayerScreen(
                                 Column {
                                     val roundedScrubMs = (scrubPosition / 1000) * 1000
                                     currentVideo?.let { v ->
-                                        AsyncImage(
-                                            model = ImageRequest.Builder(context)
+                                        val imageRequest = remember(v.fileUri, roundedScrubMs) {
+                                            ImageRequest.Builder(context)
                                                 .data(v.fileUri)
                                                 .setParameter(VideoFrameDecoder.VIDEO_FRAME_MICROS_KEY, roundedScrubMs * 1000L)
                                                 .decoderFactory(VideoFrameDecoder.Factory())
                                                 .size(320)
                                                 .crossfade(true)
-                                                .build(),
+                                                .build()
+                                        }
+                                        AsyncImage(
+                                            model = imageRequest,
                                             contentDescription = "Preview",
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxWidth().height(84.dp)
