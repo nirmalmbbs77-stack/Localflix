@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -19,12 +20,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -36,8 +42,12 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import coil.compose.AsyncImage
+import coil.decode.VideoFrameDecoder
+import coil.request.ImageRequest
 import com.example.viewmodels.SharedPlayerViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @OptIn(UnstableApi::class)
@@ -50,6 +60,8 @@ fun PlayerScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val activity = LocalContext.current as? com.example.MainActivity
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     DisposableEffect(Unit) {
         activity?.enterImmersiveMode()
@@ -69,6 +81,10 @@ fun PlayerScreen(
     var showControls by remember { mutableStateOf(true) }
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
+
+    var isScrubbing by remember { mutableStateOf(false) }
+    var scrubPosition by remember { mutableLongStateOf(0L) }
+    var sliderWidth by remember { mutableStateOf(0) }
 
     LaunchedEffect(currentVideo) {
         currentVideo?.let { video ->
@@ -101,17 +117,19 @@ fun PlayerScreen(
         onDispose { exoPlayer?.removeListener(listener) }
     }
 
-    LaunchedEffect(isPlaying, showControls) {
-        if (isPlaying && showControls) {
+    LaunchedEffect(isPlaying, showControls, isScrubbing) {
+        if (isPlaying && showControls && !isScrubbing) {
             delay(4000)
             showControls = false
         }
     }
 
-    LaunchedEffect(exoPlayer, isPlaying) {
+    LaunchedEffect(exoPlayer, isPlaying, isScrubbing) {
         while (true) {
-            currentPosition = exoPlayer?.currentPosition?.coerceAtLeast(0L) ?: 0L
-            delay(1000)
+            if (!isScrubbing) {
+                currentPosition = exoPlayer?.currentPosition?.coerceAtLeast(0L) ?: 0L
+            }
+            delay(500)
         }
     }
 
@@ -140,10 +158,14 @@ fun PlayerScreen(
         onBack()
     }
 
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        containerColor = Color.Black
+    ) { padding ->
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
             .pointerInput(showControls, duration) {
                 detectTapGestures(
                     onDoubleTap = { offset ->
@@ -246,69 +268,147 @@ fun PlayerScreen(
                     }
                 }
 
-                // BOTTOM BAR
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))
-                            )
-                        )
-                        .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = 32.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+                // BOTTOM BAR WITH SCRUB THUMBNAIL
+                Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+                    
+                    // Thumbnail Preview Layer
+                    AnimatedVisibility(
+                        visible = isScrubbing,
+                        enter = fadeIn(tween(200)),
+                        exit = fadeOut(tween(200)),
+                        modifier = Modifier.align(Alignment.TopStart).padding(bottom = 120.dp, start = 24.dp)
                     ) {
-                        Slider(
-                            value = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f,
-                            onValueChange = { percent ->
-                                currentPosition = (percent * duration).toLong()
-                                exoPlayer?.seekTo(currentPosition)
-                            },
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color.Red,
-                                activeTrackColor = Color.Red,
-                                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = formatDuration(duration - currentPosition),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
+                        val density = LocalDensity.current
+                        val thumbWidthDp = 160.dp
+                        val thumbWidthPx = with(density) { thumbWidthDp.toPx() }
+                        
+                        val offsetPx = if (duration > 0 && sliderWidth > 0) {
+                            val fraction = scrubPosition.toFloat() / duration.toFloat()
+                            (fraction * sliderWidth) - (thumbWidthPx / 2)
+                        } else 0f
+                        
+                        val maxOffsetPx = sliderWidth - thumbWidthPx
+                        val clampedOffsetPx = offsetPx.coerceIn(0f, maxOffsetPx.coerceAtLeast(0f))
+                        
+                        Box(
+                            modifier = Modifier
+                                .offset { IntOffset(clampedOffsetPx.toInt(), 0) }
+                                .width(thumbWidthDp)
+                                .height(90.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.DarkGray)
+                        ) {
+                            currentVideo?.let { v ->
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(v.fileUri)
+                                        .setParameter(VideoFrameDecoder.VIDEO_FRAME_MICROS_KEY, scrubPosition * 1000)
+                                        .decoderFactory(VideoFrameDecoder.Factory())
+                                        .size(coil.size.Size.ORIGINAL)
+                                        .build(),
+                                    contentDescription = "Preview",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            Text(
+                                text = formatDuration(scrubPosition),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))
+                                )
+                            )
+                            .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = 32.dp)
                     ) {
-                        BottomActionItem(icon = Icons.AutoMirrored.Filled.ViewList, label = "Episodes")
-                        Spacer(modifier = Modifier.width(48.dp))
-                        BottomActionItem(icon = Icons.Filled.Subtitles, label = "Audio & Subtitles")
-                        Spacer(modifier = Modifier.width(48.dp))
-                        BottomActionItem(icon = Icons.Filled.SkipNext, label = "Next episode")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Slider(
+                                value = if (duration > 0) {
+                                    val target = if (isScrubbing) scrubPosition else currentPosition
+                                    target.toFloat() / duration.toFloat()
+                                } else 0f,
+                                onValueChange = { percent ->
+                                    isScrubbing = true
+                                    scrubPosition = (percent * duration).toLong()
+                                },
+                                onValueChangeFinished = {
+                                    isScrubbing = false
+                                    currentPosition = scrubPosition
+                                    exoPlayer?.seekTo(scrubPosition)
+                                },
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color.Red,
+                                    activeTrackColor = Color.Red,
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                ),
+                                modifier = Modifier.weight(1f).onGloballyPositioned { coords ->
+                                    sliderWidth = coords.size.width
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = formatDuration(duration - (if (isScrubbing) scrubPosition else currentPosition)),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            BottomActionItem(
+                                icon = Icons.AutoMirrored.Filled.ViewList, 
+                                label = "Episodes",
+                                onClick = { coroutineScope.launch { snackbarHostState.showSnackbar("Episodes opened") } }
+                            )
+                            Spacer(modifier = Modifier.width(48.dp))
+                            BottomActionItem(
+                                icon = Icons.Filled.Subtitles, 
+                                label = "Audio & Subtitles",
+                                onClick = { coroutineScope.launch { snackbarHostState.showSnackbar("Audio & Subtitles opened") } }
+                            )
+                            Spacer(modifier = Modifier.width(48.dp))
+                            BottomActionItem(
+                                icon = Icons.Filled.SkipNext, 
+                                label = "Next episode",
+                                onClick = { coroutineScope.launch { snackbarHostState.showSnackbar("Playing Next Episode...") } }
+                            )
+                        }
                     }
                 }
             }
         }
     }
+    }
 }
 
 @Composable
-fun BottomActionItem(icon: ImageVector, label: String) {
+fun BottomActionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clickable { /* action */ }
+            .clickable(onClick = onClick)
             .padding(8.dp)
     ) {
         Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(24.dp))
