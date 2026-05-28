@@ -16,6 +16,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.decode.VideoFrameDecoder
+import androidx.compose.ui.platform.LocalContext
 import com.example.data.models.LocalVideo
 
 @Composable
@@ -24,6 +27,7 @@ fun HeroBanner(
     onPlayClick: () -> Unit,
     onInfoClick: () -> Unit
 ) {
+    val context = LocalContext.current
     if (video == null) return
 
     Box(
@@ -33,7 +37,11 @@ fun HeroBanner(
             .background(Color.Black)
     ) {
         AsyncImage(
-            model = video.thumbnailUri,
+            model = ImageRequest.Builder(context)
+                .data(video.thumbnailUri)
+                .decoderFactory(VideoFrameDecoder.Factory())
+                .crossfade(true)
+                .build(),
             contentDescription = video.title,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

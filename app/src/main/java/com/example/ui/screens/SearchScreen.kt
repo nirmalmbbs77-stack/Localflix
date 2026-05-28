@@ -17,6 +17,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.decode.VideoFrameDecoder
+import androidx.compose.ui.platform.LocalContext
 import com.example.viewmodels.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,6 +29,7 @@ fun SearchScreen(
     onNavigateUp: () -> Unit,
     onNavigateToDetails: (Long) -> Unit
 ) {
+    val context = LocalContext.current
     var query by remember { mutableStateOf("") }
     
     // Simplistic search for this demo
@@ -76,7 +80,11 @@ fun SearchScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AsyncImage(
-                        model = video.thumbnailUri,
+                        model = ImageRequest.Builder(context)
+                            .data(video.thumbnailUri)
+                            .decoderFactory(VideoFrameDecoder.Factory())
+                            .crossfade(true)
+                            .build(),
                         contentDescription = video.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier

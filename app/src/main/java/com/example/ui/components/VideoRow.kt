@@ -17,6 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.decode.VideoFrameDecoder
+import androidx.compose.ui.platform.LocalContext
 import com.example.data.models.LocalVideo
 
 @Composable
@@ -47,7 +50,7 @@ fun VideoRow(
                 VideoThumbnailCard(video = video, onClick = { onVideoClick(video) })
             }
         }
-    }
+}
 }
 
 @Composable
@@ -55,6 +58,7 @@ fun VideoThumbnailCard(
     video: LocalVideo,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .width(160.dp)
@@ -64,7 +68,11 @@ fun VideoThumbnailCard(
             .clickable { onClick() }
     ) {
         AsyncImage(
-            model = video.thumbnailUri,
+            model = ImageRequest.Builder(context)
+                .data(video.thumbnailUri)
+                .decoderFactory(VideoFrameDecoder.Factory())
+                .crossfade(true)
+                .build(),
             contentDescription = video.title,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

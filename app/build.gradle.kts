@@ -93,6 +93,7 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.coil.compose)
+  implementation(libs.coil.video)
   implementation(libs.converter.moshi)
   // implementation(libs.firebase.ai)
   implementation(libs.kotlinx.coroutines.android)

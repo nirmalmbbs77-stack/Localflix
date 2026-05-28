@@ -54,7 +54,10 @@ fun PlayerScreen(
     LaunchedEffect(currentVideo) {
         currentVideo?.let { video ->
             if (exoPlayer == null) {
-                exoPlayer = ExoPlayer.Builder(context).build().apply {
+                exoPlayer = ExoPlayer.Builder(context)
+                    .setSeekForwardIncrementMs(15000L)
+                    .setSeekBackIncrementMs(15000L)
+                    .build().apply {
                     val mediaItem = MediaItem.fromUri(Uri.parse(video.fileUri))
                     setMediaItem(mediaItem)
                     prepare()
@@ -115,17 +118,9 @@ fun PlayerScreen(
         if (exoPlayer != null) {
             AndroidView(
                 factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        player = exoPlayer
-                        useController = true
-                        setShowNextButton(false)
-                        setShowPreviousButton(false)
-                        layoutParams = FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    }
+                    val playerView = android.view.LayoutInflater.from(ctx).inflate(com.example.R.layout.view_player, null, false) as androidx.media3.ui.PlayerView
+                    playerView.player = exoPlayer
+                    playerView
                 },
                 modifier = Modifier.fillMaxSize()
             )

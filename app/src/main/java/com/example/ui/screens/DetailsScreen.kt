@@ -18,6 +18,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.decode.VideoFrameDecoder
+import androidx.compose.ui.platform.LocalContext
 import com.example.viewmodels.SharedPlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,6 +31,7 @@ fun DetailsScreen(
     onNavigateUp: () -> Unit,
     onPlayClick: (Long) -> Unit
 ) {
+    val context = LocalContext.current
     LaunchedEffect(videoId) {
         viewModel.setVideo(videoId)
     }
@@ -69,7 +73,11 @@ fun DetailsScreen(
                     .height(300.dp)
             ) {
                 AsyncImage(
-                    model = v.thumbnailUri,
+                    model = ImageRequest.Builder(context)
+                        .data(v.thumbnailUri)
+                        .decoderFactory(VideoFrameDecoder.Factory())
+                        .crossfade(true)
+                        .build(),
                     contentDescription = v.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
