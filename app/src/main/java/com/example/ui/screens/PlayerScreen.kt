@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -282,7 +283,7 @@ fun PlayerScreen(
                         visible = isScrubbing,
                         enter = fadeIn(tween(200)),
                         exit = fadeOut(tween(200)),
-                        modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 84.dp, start = 24.dp)
+                        modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 100.dp, start = 24.dp)
                     ) {
                         val density = LocalDensity.current
                         val thumbWidthDp = 150.dp
@@ -367,7 +368,7 @@ fun PlayerScreen(
                             Slider(
                                 value = if (duration > 0) {
                                     val target = if (isScrubbing) scrubPosition else currentPosition
-                                    target.toFloat() / duration.toFloat()
+                                    (target.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                                 } else 0f,
                                 onValueChange = { percent ->
                                     isScrubbing = true
@@ -389,7 +390,7 @@ fun PlayerScreen(
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
-                                text = formatDuration(duration - (if (isScrubbing) scrubPosition else currentPosition)),
+                                text = formatDuration((duration - (if (isScrubbing) scrubPosition else currentPosition)).coerceAtLeast(0L)),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
@@ -432,14 +433,21 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { showEpisodesSheet = false },
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { showEpisodesSheet = false },
             contentAlignment = Alignment.BottomCenter
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.DarkGray, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                    .clickable(enabled = false) {}
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} 
+                    )
             ) {
                 Column {
                     Row(
@@ -475,14 +483,21 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { showSubtitlesSheet = false },
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { showSubtitlesSheet = false },
             contentAlignment = Alignment.BottomCenter
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.DarkGray, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                    .clickable(enabled = false) {}
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
             ) {
                 Column {
                     Row(
