@@ -1,0 +1,6 @@
+{
+  "name": "LocalFlix",
+  "description": "A premium cinematic local media player inspired by Netflix.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
